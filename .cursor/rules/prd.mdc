@@ -1,0 +1,33 @@
+---
+description: Product requirements document. This contains a high-level overview of the CounterCounter app's functionality.
+globs: 
+---
+
+# Description
+
+The CounterCounter app is a life tracker for trading card games. By default, the app starts with 1 player at 5 life. The life counter can be increased or decreased by tapping on specific buttons. The number of players can be increased or decreased, up to a maximum of 4 players and a minimum of 1 player.
+
+# Detailed functionality
+- Default starting life is 5
+- People can add or remove players up to a maximum of 4, or a minimum of 1
+- Swiping left on the screen reveals 2 actions:
+    - Add a player
+    - Open preferences menu
+- Swiping right on the screen reveals 2 actions:
+    - Remove a player
+    - Open preferences menu
+- The life counter of each player should display:
+    - The value of the counter in the center
+    - An up arrow icon that is a button for increasing the counter, above the counter value
+    - A down arrow icon that is a button for decreasing the counter, below the counter value
+- Life counter behavior:
+    - People can tap the top half of the counter area to increase
+    - People can tap the bottom half of the counter area to decrease
+    - People can tap and hold anywhere in the counter area to bring up an iOS picker to manually enter a numeric value or scroll to select one
+    - Increasing or decreasing the life counter should have an animation on the number values
+- The life counters have a color palette that controls the color of the background, the color of the counter value, and the color of the 2 arrow icon buttons. The color palette can be changed in the Preferences menu.
+- Preferences menu:
+    - The preferences menu displays in a sheet
+    - People can change the default starting life using a segmented control with the following options: 2, 3, 4, 5, 6
+    - People can change the number of players using a segmented control with the following options: 1, 2, 3, 4
+    - People can change the color palette of the life counters between the following options: Grayscale, Sage, Sunrise. The default color palette is Grayscale.

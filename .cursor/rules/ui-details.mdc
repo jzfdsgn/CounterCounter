@@ -1,0 +1,56 @@
+---
+description: Details for the user interface of the app.
+globs: 
+---
+
+# Description
+
+This is a SwiftUI app. Use native iOS components as much as possible, keeping in mind that I will customize the styles.
+
+# Details
+
+- Use this font for the app: SF Pro
+- Use SF symbols for the icons in the app
+- When a life counter value is increased or decreased, animate the transition of the number changing
+
+## Life Counter Color Palettes
+
+- Grayscale (default palette)
+    - Player 1
+        - Background color: #0F0F0F
+        - Foreground color: #FFFFFF
+    - Player 2
+        - Background color: #555555
+        - Foreground color: #FFFFFF
+    - Player 3
+        - Background color: #C6C6C6
+        - Foreground color: #0F0F0F
+    - Player 4
+        - Background color: #FCFCFC
+        - Foreground color: #0F0F0F
+- Sage
+    - Player 1
+        - Background color: #248876
+        - Foreground color: #FFE4AE
+    - Player 2
+        - Background color: #3F9A89
+        - Foreground color: #FFE4AE
+    - Player 3
+        - Background color: #FFE4AE
+        - Foreground color: #3F9A89
+    - Player 4
+        - Background color: #FFF6E3
+        - Foreground color: #3F9A89
+- Sunrise
+    - Player 1
+        - Background color: #FFB82D
+        - Foreground color: #47320A
+    - Player 2
+        - Background color: #FFD27C
+        - Foreground color: #47320A
+    - Player 3
+        - Background color: #FFE3AB
+        - Foreground color: #47320A
+    - Player 4
+        - Background color: #FFF4DD
+        - Foreground color: #47320A
