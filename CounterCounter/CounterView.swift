@@ -30,7 +30,7 @@ struct CounterView: View {
                         .font(.system(size: 180,weight: .black))
                         .fontWidth(.expanded)
                         .foregroundColor(foregroundColor)
-                        .contentTransition(.numericText())
+                        .contentTransition(.numericText(value: Double(lifeTotal)))
                     
                     // Down arrow button
                     Image(systemName: "chevron.compact.down")
@@ -48,7 +48,7 @@ struct CounterView: View {
                         .gesture(
                             SpatialTapGesture()
                                 .onEnded { _ in
-                                    withAnimation(.spring(response: 0.3)) {
+                                    withAnimation(.snappy(duration: 0.2)) {
                                         lifeTotal += 1
                                     }
                                 }
@@ -61,8 +61,10 @@ struct CounterView: View {
                         .gesture(
                             SpatialTapGesture()
                                 .onEnded { _ in
-                                    withAnimation(.spring(response: 0.3)) {
-                                        lifeTotal -= 1
+                                    withAnimation(.snappy(duration: 0.2)) {
+                                        if lifeTotal > 0 {
+                                            lifeTotal -= 1
+                                        }
                                     }
                                 }
                         )
