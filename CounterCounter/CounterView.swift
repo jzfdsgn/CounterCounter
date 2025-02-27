@@ -7,12 +7,50 @@
 
 import SwiftUI
 
-struct CounterView: View {
-    @State private var lifeTotal: Int = 5
-    @State private var showingLifePicker = false
+// Enum to represent the different color palettes
+enum ColorPalette: String, CaseIterable, Identifiable {
+    case grayscale = "Grayscale"
+    case sage = "Sage"
+    case sunrise = "Sunrise"
     
-    private let backgroundColor = Color(hex: "0F0F0F") // Player 1 Grayscale
-    private let foregroundColor = Color(hex: "FFFFFF")
+    var id: String { self.rawValue }
+}
+
+// Class to manage app settings
+class AppSettings: ObservableObject {
+    @Published var selectedPalette: ColorPalette = .grayscale
+    @Published var numberOfPlayers: Int = 1
+    @Published var defaultStartingLife: Int = 5
+    
+    // Singleton instance
+    static let shared = AppSettings()
+    
+    private init() {}
+}
+
+struct CounterView: View {
+    @State private var lifeTotal: Int
+    @State private var showingLifePicker = false
+    @StateObject private var settings = AppSettings.shared
+    
+    // Player number (1-4)
+    var playerNumber: Int = 1
+    
+    // Dynamic color properties based on palette and player number
+    private var backgroundColor: Color {
+        Color.background(for: playerNumber, in: settings.selectedPalette)
+    }
+    
+    private var foregroundColor: Color {
+        Color.foreground(for: playerNumber, in: settings.selectedPalette)
+    }
+    
+    // Initialize with default life total from settings
+    init(playerNumber: Int = 1) {
+        self.playerNumber = playerNumber
+        // Use _lifeTotal to initialize the @State property
+        _lifeTotal = State(initialValue: AppSettings.shared.defaultStartingLife)
+    }
     
     var body: some View {
         GeometryReader { geometry in
@@ -110,6 +148,7 @@ struct LifePickerView: View {
 }
 
 extension Color {
+    // Hex initializer for convenience
     init(hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
         var int: UInt64 = 0
@@ -132,6 +171,43 @@ extension Color {
             blue:  Double(b) / 255,
             opacity: Double(a) / 255
         )
+    }
+    
+    // MARK: - Dynamic Color Access
+    
+    // Get background color for a specific player and palette
+    static func background(for playerNumber: Int, in palette: ColorPalette) -> Color {
+        let validPlayerNumber = max(1, min(playerNumber, 4)) // Ensure player number is between 1-4
+        let prefix: String
+        
+        switch palette {
+        case .grayscale: prefix = "GrayScale"
+        case .sage: prefix = "Sage"
+        case .sunrise: prefix = "Sunrise"
+        }
+        
+        return Color("\(prefix)_Background\(validPlayerNumber)")
+    }
+    
+    // Get foreground color for a specific player and palette
+    static func foreground(for playerNumber: Int, in palette: ColorPalette) -> Color {
+        let validPlayerNumber = max(1, min(playerNumber, 4)) // Ensure player number is between 1-4
+        
+        switch palette {
+        case .grayscale:
+            // Players 1-2 use foreground1, players 3-4 use foreground2
+            return validPlayerNumber <= 2 ? 
+                Color("GrayScale_Foreground1") : 
+                Color("GrayScale_Foreground2")
+        case .sage:
+            // Players 1-2 use foreground1, players 3-4 use foreground2
+            return validPlayerNumber <= 2 ? 
+                Color("Sage_Foreground1") : 
+                Color("Sage_Foreground2")
+        case .sunrise:
+            // All players use the same foreground
+            return Color("Sunrise_Foreground")
+        }
     }
 }
 
