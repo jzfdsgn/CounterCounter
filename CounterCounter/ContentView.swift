@@ -10,62 +10,106 @@ import SwiftUI
 struct ContentView: View {
     @ObservedObject private var settings = AppSettings.shared
     @State private var showingPreferences = false
-    @State private var dragOffset: CGFloat = 0
+    @State private var horizontalDragOffset: CGFloat = 0
+    @State private var verticalDragOffset: CGFloat = 0
+    @State private var showingSideMenu = false
+    @State private var isLeftMenu = false
+    
+    private let menuWidth: CGFloat = 60
     
     var body: some View {
         GeometryReader { geometry in
             ZStack {
                 // Main content
                 playerCountersView()
+                    .offset(x: horizontalDragOffset, y: verticalDragOffset)
+                    .animation(.interactiveSpring(), value: horizontalDragOffset)
+                    .animation(.interactiveSpring(), value: verticalDragOffset)
                 
-                // Side menu indicators
-                HStack {
-                    // Left edge indicator
-                    Rectangle()
-                        .fill(Color.gray.opacity(0.3))
-                        .frame(width: 5)
-                        .opacity(dragOffset > 0 ? 1 : 0)
-                    
+                // Add Player indicator (right side)
+                HStack(spacing: 0) {
                     Spacer()
-                    
-                    // Right edge indicator
-                    Rectangle()
-                        .fill(Color.gray.opacity(0.3))
-                        .frame(width: 5)
-                        .opacity(dragOffset < 0 ? 1 : 0)
+                    indicatorView(systemName: "plus.square.fill", width: menuWidth)
+                        .offset(x: horizontalDragOffset + menuWidth)
                 }
-                .ignoresSafeArea()
+                .opacity(horizontalDragOffset < 0 ? 1 : 0)
+                
+                // Remove Player indicator (left side)
+                HStack(spacing: 0) {
+                    indicatorView(systemName: "minus.square.fill", width: menuWidth)
+                        .offset(x: horizontalDragOffset - menuWidth)
+                    Spacer()
+                }
+                .opacity(horizontalDragOffset > 0 ? 1 : 0)
+                
+                // Preferences indicator
+                indicatorView(systemName: "gearshape.fill", width: geometry.size.width)
+                    .frame(maxHeight: .infinity, alignment: .top)
+                    .offset(y: -menuWidth + verticalDragOffset)
+                    .opacity(verticalDragOffset > 0 ? 1 : 0)
             }
             .gesture(
                 DragGesture()
                     .onChanged { value in
-                        self.dragOffset = value.translation.width
+                        // Determine if the drag is more horizontal or vertical
+                        let horizontalDrag = abs(value.translation.width) > abs(value.translation.height)
+                        
+                        if horizontalDrag {
+                            self.horizontalDragOffset = value.translation.width
+                            self.verticalDragOffset = 0
+                        } else if value.translation.height >= 0 { // Only allow downward swipes
+                            self.verticalDragOffset = value.translation.height
+                            self.horizontalDragOffset = 0
+                        }
                     }
                     .onEnded { value in
-                        let threshold = geometry.size.width * 0.2
+                        let horizontalThreshold = geometry.size.width * 0.2
+                        let verticalThreshold = geometry.size.height * 0.2
                         
-                        if value.translation.width > threshold {
-                            // Swiped right - show remove player menu
-                            if settings.numberOfPlayers > 1 {
-                                settings.numberOfPlayers -= 1
+                        withAnimation(.spring()) {
+                            // Handle horizontal swipes
+                            if abs(value.translation.width) > abs(value.translation.height) {
+                                if value.translation.width > horizontalThreshold {
+                                    // Swiped right - decrease player count
+                                    if settings.numberOfPlayers > 1 {
+                                        settings.numberOfPlayers -= 1
+                                    }
+                                } else if value.translation.width < -horizontalThreshold {
+                                    // Swiped left - increase player count
+                                    if settings.numberOfPlayers < 4 {
+                                        settings.numberOfPlayers += 1
+                                    }
+                                }
                             }
-                        } else if value.translation.width < -threshold {
-                            // Swiped left - show add player menu
-                            if settings.numberOfPlayers < 4 {
-                                settings.numberOfPlayers += 1
+                            // Handle vertical swipes (downward only)
+                            else if value.translation.height > verticalThreshold {
+                                // Swiped down - show preferences
+                                self.showingPreferences = true
                             }
+                            
+                            // Reset positions
+                            self.horizontalDragOffset = 0
+                            self.verticalDragOffset = 0
                         }
-                        
-                        // Reset drag offset
-                        self.dragOffset = 0
                     }
             )
-            .onLongPressGesture {
-                showingPreferences = true
-            }
-            .sheet(isPresented: $showingPreferences) {
-                PreferencesView()
-            }
+        }
+        .sheet(isPresented: $showingPreferences) {
+            PreferencesView()
+        }
+    }
+    
+    @ViewBuilder
+    private func indicatorView(systemName: String, width: CGFloat) -> some View {
+        ZStack {
+            Rectangle()
+                .fill(.clear)
+                .frame(width: width, height: menuWidth)
+            
+            Image(systemName: systemName)
+                .font(.system(size: 32))
+                .foregroundColor(.primary)
+                .animation(.none) // Prevent icon animation
         }
     }
     
