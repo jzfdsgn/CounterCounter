@@ -36,6 +36,9 @@ struct CounterView: View {
     // Player number (1-4)
     var playerNumber: Int = 1
     
+    // Rotation angle for 2-player mode
+    var rotationAngle: Double = 0
+    
     // Dynamic color properties based on palette and player number
     private var backgroundColor: Color {
         Color.background(for: playerNumber, in: settings.selectedPalette)
@@ -46,8 +49,9 @@ struct CounterView: View {
     }
     
     // Initialize with default life total from settings
-    init(playerNumber: Int = 1) {
+    init(playerNumber: Int = 1, rotationAngle: Double = 0) {
         self.playerNumber = playerNumber
+        self.rotationAngle = rotationAngle
         // Use _lifeTotal to initialize the @State property
         _lifeTotal = State(initialValue: AppSettings.shared.defaultStartingLife)
     }
@@ -115,6 +119,8 @@ struct CounterView: View {
                 )
             }
         }
+        .rotationEffect(.degrees(rotationAngle))
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .sheet(isPresented: $showingLifePicker) {
             LifePickerView(lifeTotal: $lifeTotal)
         }
