@@ -39,6 +39,12 @@ struct CounterView: View {
     // Rotation angle for 2-player mode
     var rotationAngle: Double = 0
     
+    // Font size for life total
+    var fontSize: CGFloat = 180
+    
+    // Spacing for VStack containing arrows and life total
+    var vStackSpacing: CGFloat = 20
+    
     // Dynamic color properties based on palette and player number
     private var backgroundColor: Color {
         Color.background(for: playerNumber, in: settings.selectedPalette)
@@ -49,9 +55,11 @@ struct CounterView: View {
     }
     
     // Initialize with default life total from settings
-    init(playerNumber: Int = 1, rotationAngle: Double = 0) {
+    init(playerNumber: Int = 1, rotationAngle: Double = 0, fontSize: CGFloat = 180, vStackSpacing: CGFloat = 20) {
         self.playerNumber = playerNumber
         self.rotationAngle = rotationAngle
+        self.fontSize = fontSize
+        self.vStackSpacing = vStackSpacing
         // Use _lifeTotal to initialize the @State property
         _lifeTotal = State(initialValue: AppSettings.shared.defaultStartingLife)
     }
@@ -61,7 +69,7 @@ struct CounterView: View {
             ZStack {
                 backgroundColor.ignoresSafeArea()
                 
-                VStack(spacing: 20) {
+                VStack(spacing: vStackSpacing) {
                     // Up arrow button
                     Image(systemName: "chevron.compact.up")
                         .font(.system(size: 24, weight: .bold))
@@ -69,7 +77,7 @@ struct CounterView: View {
                     
                     // Life total display
                     Text("\(lifeTotal)")
-                        .font(.system(size: 180,weight: .black))
+                        .font(.system(size: fontSize, weight: .black))
                         .fontWidth(.expanded)
                         .foregroundColor(foregroundColor)
                         .contentTransition(.numericText(value: Double(lifeTotal)))

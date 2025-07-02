@@ -12,106 +12,142 @@ struct ContentView: View {
     @State private var showingPreferences = false
     @State private var horizontalDragOffset: CGFloat = 0
     @State private var verticalDragOffset: CGFloat = 0
-    @State private var showingSideMenu = false
-    @State private var isLeftMenu = false
+    @State private var showingActionMenu = false
+    @State private var actionMenuOffset: CGFloat = 0
     
     private let menuWidth: CGFloat = 60
+    private let actionButtonWidth: CGFloat = 80
     
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                // Main content (fixed)
+                // Main content with offset when action menu is shown
                 playerCountersView()
+                    .offset(x: actionMenuOffset)
+                    .animation(.interactiveSpring(), value: actionMenuOffset)
                 
-                // Add Player indicator (slides in from right)
-                HStack(spacing: 0) {
-                    Spacer()
-                    indicatorView(systemName: "plus.square.fill", width: menuWidth)
-                }
-                .offset(x: horizontalDragOffset < 0 ? 0 : geometry.size.width)
-                .animation(.interactiveSpring(), value: horizontalDragOffset)
-                
-                // Remove Player indicator (slides in from left)
-                HStack(spacing: 0) {
-                    indicatorView(systemName: "minus.square.fill", width: menuWidth)
-                    Spacer()
-                }
-                .offset(x: horizontalDragOffset > 0 ? 0 : -geometry.size.width)
-                .animation(.interactiveSpring(), value: horizontalDragOffset)
-                
-                // Preferences indicator (slides in from top)
-                indicatorView(systemName: "gearshape.fill", width: geometry.size.width)
-                    .frame(maxHeight: .infinity, alignment: .top)
-                    .offset(y: verticalDragOffset > 0 ? 0 : -menuWidth)
-                    .animation(.interactiveSpring(), value: verticalDragOffset)
-            }
-        }
-        .gesture(
-            DragGesture()
-                .onChanged { value in
-                    // Determine if the drag is more horizontal or vertical
-                    let horizontalDrag = abs(value.translation.width) > abs(value.translation.height)
-                    
-                    if horizontalDrag {
-                        self.horizontalDragOffset = value.translation.width
-                        self.verticalDragOffset = 0
-                    } else if value.translation.height >= 0 { // Only allow downward swipes
-                        self.verticalDragOffset = value.translation.height
-                        self.horizontalDragOffset = 0
+                // Action menu (slides in from right)
+                if showingActionMenu || actionMenuOffset < 0 {
+                    HStack(spacing: 0) {
+                        Spacer()
+                        actionMenuView()
                     }
+                    .offset(x: showingActionMenu ? 0 : actionButtonWidth * 3)
+                    .animation(.interactiveSpring(), value: showingActionMenu)
                 }
-                .onEnded { value in
-                    let horizontalThreshold = UIScreen.main.bounds.width * 0.2
-                    let verticalThreshold = UIScreen.main.bounds.height * 0.2
-                    
-                    withAnimation(.spring()) {
-                        // Handle horizontal swipes
-                        if abs(value.translation.width) > abs(value.translation.height) {
-                            if value.translation.width > horizontalThreshold {
-                                // Swiped right - decrease player count
-                                if settings.numberOfPlayers > 1 {
-                                    settings.numberOfPlayers -= 1
+            }
+            .gesture(
+                DragGesture()
+                    .onChanged { value in
+                        let horizontalDrag = abs(value.translation.width) > abs(value.translation.height)
+                        
+                        if horizontalDrag && value.translation.width < 0 {
+                            // Swiping left - show action menu
+                            let dragDistance = min(abs(value.translation.width), actionButtonWidth * 3)
+                            actionMenuOffset = -dragDistance
+                            showingActionMenu = dragDistance > 50
+                        } else if horizontalDrag && value.translation.width > 0 && showingActionMenu {
+                            // Swiping right - hide action menu
+                            let dragDistance = max(0, actionButtonWidth * 3 - value.translation.width)
+                            actionMenuOffset = -dragDistance
+                            showingActionMenu = dragDistance > actionButtonWidth * 1.5
+                        }
+                    }
+                    .onEnded { value in
+                        let horizontalThreshold: CGFloat = 100
+                        
+                        withAnimation(.spring()) {
+                            if abs(value.translation.width) > abs(value.translation.height) {
+                                if value.translation.width < -horizontalThreshold {
+                                    // Swiped left - show action menu
+                                    showingActionMenu = true
+                                    actionMenuOffset = -(actionButtonWidth * 3)
+                                } else if value.translation.width > horizontalThreshold && showingActionMenu {
+                                    // Swiped right - hide action menu
+                                    showingActionMenu = false
+                                    actionMenuOffset = 0
+                                } else {
+                                    // Snap back to current state
+                                    actionMenuOffset = showingActionMenu ? -(actionButtonWidth * 3) : 0
                                 }
-                            } else if value.translation.width < -horizontalThreshold {
-                                // Swiped left - increase player count
-                                if settings.numberOfPlayers < 4 {
-                                    settings.numberOfPlayers += 1
-                                }
+                            } else {
+                                // Vertical gesture - keep current menu state
+                                actionMenuOffset = showingActionMenu ? -(actionButtonWidth * 3) : 0
                             }
                         }
-                        // Handle vertical swipes (downward only)
-                        else if value.translation.height > verticalThreshold {
-                            // Swiped down - show preferences
-                            self.showingPreferences = true
-                        }
-                        
-                        // Reset positions
-                        self.horizontalDragOffset = 0
-                        self.verticalDragOffset = 0
                     }
-                }
-        )
+            )
+        }
+        .ignoresSafeArea()
         .sheet(isPresented: $showingPreferences) {
             PreferencesView()
         }
     }
     
     @ViewBuilder
-    private func indicatorView(systemName: String, width: CGFloat) -> some View {
-        ZStack {
-            Rectangle()
-                .fill(.clear)
-                .frame(width: width, height: menuWidth)
+    private func actionMenuView() -> some View {
+        HStack(spacing: 0) {
+            // Add Player button
+            actionButton(
+                systemName: "plus.circle.fill",
+                color: .blue,
+                action: {
+                    if settings.numberOfPlayers < 4 {
+                        withAnimation(.spring()) {
+                            settings.numberOfPlayers += 1
+                            hideActionMenu()
+                        }
+                    }
+                }
+            )
             
-            Image(systemName: systemName)
-                .font(.system(size: 40))
-                .foregroundColor(.primary)
-                .frame(width: menuWidth, height: menuWidth)
-                .contentShape(Rectangle())
-                .animation(nil, value: horizontalDragOffset)
-                .animation(nil, value: verticalDragOffset)
+            // Remove Player button
+            actionButton(
+                systemName: "minus.circle.fill",
+                color: .orange,
+                action: {
+                    if settings.numberOfPlayers > 1 {
+                        withAnimation(.spring()) {
+                            settings.numberOfPlayers -= 1
+                            hideActionMenu()
+                        }
+                    }
+                }
+            )
+            
+            // Preferences button
+            actionButton(
+                systemName: "gearshape.fill",
+                color: .red,
+                action: {
+                    showingPreferences = true
+                    hideActionMenu()
+                }
+            )
         }
-        .clipped()
+    }
+    
+    @ViewBuilder
+    private func actionButton(systemName: String, color: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            ZStack {
+                Rectangle()
+                    .fill(color)
+                    .frame(width: actionButtonWidth, height: UIScreen.main.bounds.height)
+                
+                Image(systemName: systemName)
+                    .font(.system(size: 30, weight: .bold))
+                    .foregroundColor(.white)
+            }
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+    
+    private func hideActionMenu() {
+        withAnimation(.spring()) {
+            showingActionMenu = false
+            actionMenuOffset = 0
+        }
     }
     
     @ViewBuilder
@@ -121,31 +157,95 @@ struct ContentView: View {
             CounterView(playerNumber: 1)
         case 2:
             GeometryReader { geometry in
-                VStack(spacing: 0) {
-                    CounterView(playerNumber: 2, rotationAngle: 180)
-                        .frame(height: geometry.size.height / 2)
-                    CounterView(playerNumber: 1)
-                        .frame(height: geometry.size.height / 2)
+                let isLandscape = geometry.size.width > geometry.size.height
+                
+                if isLandscape {
+                    // Landscape: side-by-side, both upright
+                    HStack(spacing: 0) {
+                        CounterView(playerNumber: 1)
+                            .frame(width: geometry.size.width / 2)
+                        CounterView(playerNumber: 2)
+                            .frame(width: geometry.size.width / 2)
+                    }
+                } else {
+                    // Portrait: top-bottom with one rotated 180°
+                    VStack(spacing: 0) {
+                        CounterView(playerNumber: 2, rotationAngle: 180)
+                            .frame(height: geometry.size.height / 2)
+                        CounterView(playerNumber: 1)
+                            .frame(height: geometry.size.height / 2)
+                    }
                 }
             }
-            .ignoresSafeArea()
         case 3:
-            VStack(spacing: 0) {
-                CounterView(playerNumber: 1)
-                HStack(spacing: 0) {
-                    CounterView(playerNumber: 2)
-                    CounterView(playerNumber: 3)
+            GeometryReader { geometry in
+                let isLandscape = geometry.size.width > geometry.size.height
+                
+                if isLandscape {
+                    // Landscape: all three side-by-side, all upright
+                    HStack(spacing: 0) {
+                        CounterView(playerNumber: 1, fontSize: 156)
+                            .frame(width: geometry.size.width / 3)
+                        CounterView(playerNumber: 2, fontSize: 156)
+                            .frame(width: geometry.size.width / 3)
+                        CounterView(playerNumber: 3, fontSize: 156)
+                            .frame(width: geometry.size.width / 3)
+                    }
+                } else {
+                    // Portrait: top two players rotated 180°, bottom player upright
+                    VStack(spacing: 0) {
+                        HStack(spacing: 0) {
+                            CounterView(playerNumber: 2, rotationAngle: 180, fontSize: 156)
+                                .frame(width: geometry.size.width / 2)
+                            CounterView(playerNumber: 3, rotationAngle: 180, fontSize: 156)
+                                .frame(width: geometry.size.width / 2)
+                        }
+                        .frame(height: geometry.size.height / 2)
+                        CounterView(playerNumber: 1, fontSize: 156)
+                            .frame(height: geometry.size.height / 2)
+                    }
                 }
             }
         case 4:
-            VStack(spacing: 0) {
-                HStack(spacing: 0) {
-                    CounterView(playerNumber: 1)
-                    CounterView(playerNumber: 2)
-                }
-                HStack(spacing: 0) {
-                    CounterView(playerNumber: 3)
-                    CounterView(playerNumber: 4)
+            GeometryReader { geometry in
+                let isLandscape = geometry.size.width > geometry.size.height
+                
+                if isLandscape {
+                    // Landscape: 2x2 grid, same positions as portrait but all upright
+                    VStack(spacing: 0) {
+                        HStack(spacing: 0) {
+                            CounterView(playerNumber: 3, rotationAngle: 180, fontSize: 120, vStackSpacing: 0)
+                                .frame(width: geometry.size.width / 2)
+                            CounterView(playerNumber: 4, rotationAngle: 180, fontSize: 120, vStackSpacing: 0)
+                                .frame(width: geometry.size.width / 2)
+                        }
+                        .frame(height: geometry.size.height / 2)
+                        HStack(spacing: 0) {
+                            CounterView(playerNumber: 1, fontSize: 120, vStackSpacing: 0)
+                                .frame(width: geometry.size.width / 2)
+                            CounterView(playerNumber: 2, fontSize: 120, vStackSpacing: 0)
+                                .frame(width: geometry.size.width / 2)
+                        }
+                        .frame(height: geometry.size.height / 2)
+                    }
+                } else {
+                    // Portrait: 2x2 grid with top row rotated 180°
+                    VStack(spacing: 0) {
+                        HStack(spacing: 0) {
+                            CounterView(playerNumber: 3, rotationAngle: 180, fontSize: 156)
+                                .frame(width: geometry.size.width / 2)
+                            CounterView(playerNumber: 4, rotationAngle: 180, fontSize: 156)
+                                .frame(width: geometry.size.width / 2)
+                        }
+                        .frame(height: geometry.size.height / 2)
+                        HStack(spacing: 0) {
+                            CounterView(playerNumber: 1, fontSize: 156)
+                                .frame(width: geometry.size.width / 2)
+                            CounterView(playerNumber: 2, fontSize: 156)
+                                .frame(width: geometry.size.width / 2)
+                        }
+                        .frame(height: geometry.size.height / 2)
+                    }
                 }
             }
         default:
