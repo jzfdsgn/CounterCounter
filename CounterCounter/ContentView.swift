@@ -10,69 +10,45 @@ import SwiftUI
 struct ContentView: View {
     @ObservedObject private var settings = AppSettings.shared
     @State private var showingPreferences = false
-    @State private var horizontalDragOffset: CGFloat = 0
-    @State private var verticalDragOffset: CGFloat = 0
     @State private var showingActionMenu = false
-    @State private var actionMenuOffset: CGFloat = 0
-    
-    private let menuWidth: CGFloat = 60
-    private let actionButtonWidth: CGFloat = 80
+    @State private var menuOffset: CGFloat = 0
     
     var body: some View {
         GeometryReader { geometry in
-            ZStack {
-                // Main content with offset when action menu is shown
+            let menuWidth = geometry.size.width * 0.75 // Menu takes up 75% of screen width
+            
+            ZStack(alignment: .leading) {
+                // Main content (gets pushed to the left when menu is shown)
                 playerCountersView()
-                    .offset(x: actionMenuOffset)
-                    .animation(.interactiveSpring(), value: actionMenuOffset)
+                    .offset(x: showingActionMenu ? -menuWidth + 80 : 0)
+                    .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showingActionMenu)
                 
                 // Action menu (slides in from right)
-                if showingActionMenu || actionMenuOffset < 0 {
-                    HStack(spacing: 0) {
-                        Spacer()
-                        actionMenuView()
-                    }
-                    .offset(x: showingActionMenu ? 0 : actionButtonWidth * 3)
-                    .animation(.interactiveSpring(), value: showingActionMenu)
+                HStack(spacing: 0) {
+                    Spacer()
+                    actionMenuView(screenHeight: geometry.size.height)
+                        .frame(width: menuWidth)
+                        .background(Color(red: 0.95, green: 0.95, blue: 0.95))
                 }
+                .offset(x: showingActionMenu ? 0 : menuWidth)
+                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showingActionMenu)
             }
             .gesture(
                 DragGesture()
-                    .onChanged { value in
-                        let horizontalDrag = abs(value.translation.width) > abs(value.translation.height)
-                        
-                        if horizontalDrag && value.translation.width < 0 {
-                            // Swiping left - show action menu
-                            let dragDistance = min(abs(value.translation.width), actionButtonWidth * 3)
-                            actionMenuOffset = -dragDistance
-                            showingActionMenu = dragDistance > 50
-                        } else if horizontalDrag && value.translation.width > 0 && showingActionMenu {
-                            // Swiping right - hide action menu
-                            let dragDistance = max(0, actionButtonWidth * 3 - value.translation.width)
-                            actionMenuOffset = -dragDistance
-                            showingActionMenu = dragDistance > actionButtonWidth * 1.5
-                        }
-                    }
                     .onEnded { value in
                         let horizontalThreshold: CGFloat = 100
                         
-                        withAnimation(.spring()) {
-                            if abs(value.translation.width) > abs(value.translation.height) {
-                                if value.translation.width < -horizontalThreshold {
-                                    // Swiped left - show action menu
+                        if abs(value.translation.width) > abs(value.translation.height) {
+                            if value.translation.width < -horizontalThreshold {
+                                // Swiped left - show action menu
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                                     showingActionMenu = true
-                                    actionMenuOffset = -(actionButtonWidth * 3)
-                                } else if value.translation.width > horizontalThreshold && showingActionMenu {
-                                    // Swiped right - hide action menu
-                                    showingActionMenu = false
-                                    actionMenuOffset = 0
-                                } else {
-                                    // Snap back to current state
-                                    actionMenuOffset = showingActionMenu ? -(actionButtonWidth * 3) : 0
                                 }
-                            } else {
-                                // Vertical gesture - keep current menu state
-                                actionMenuOffset = showingActionMenu ? -(actionButtonWidth * 3) : 0
+                            } else if value.translation.width > horizontalThreshold && showingActionMenu {
+                                // Swiped right - hide action menu
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                    showingActionMenu = false
+                                }
                             }
                         }
                     }
@@ -85,68 +61,86 @@ struct ContentView: View {
     }
     
     @ViewBuilder
-    private func actionMenuView() -> some View {
-        HStack(spacing: 0) {
-            // Add Player button
-            actionButton(
-                systemName: "plus.circle.fill",
-                color: .blue,
-                action: {
-                    if settings.numberOfPlayers < 4 {
-                        withAnimation(.spring()) {
-                            settings.numberOfPlayers += 1
-                            hideActionMenu()
+    private func actionMenuView(screenHeight: CGFloat) -> some View {
+        VStack(spacing: 0) {
+            Spacer()
+            
+            // Menu items aligned to bottom
+            VStack(spacing: 0) {
+                // Add Player button
+                actionMenuButton(
+                    title: "Add Player",
+                    systemName: "plus",
+                    backgroundColor: Color(red: 0.95, green: 0.95, blue: 0.95),
+                    isEnabled: settings.numberOfPlayers < 4,
+                    action: {
+                        if settings.numberOfPlayers < 4 {
+                            withAnimation(.spring()) {
+                                settings.numberOfPlayers += 1
+                                hideActionMenu()
+                            }
                         }
                     }
-                }
-            )
-            
-            // Remove Player button
-            actionButton(
-                systemName: "minus.circle.fill",
-                color: .orange,
-                action: {
-                    if settings.numberOfPlayers > 1 {
-                        withAnimation(.spring()) {
-                            settings.numberOfPlayers -= 1
-                            hideActionMenu()
+                )
+                
+                // Remove Player button
+                actionMenuButton(
+                    title: "Remove Player",
+                    systemName: "minus",
+                    backgroundColor: Color(red: 0.90, green: 0.90, blue: 0.90),
+                    isEnabled: settings.numberOfPlayers > 1,
+                    action: {
+                        if settings.numberOfPlayers > 1 {
+                            withAnimation(.spring()) {
+                                settings.numberOfPlayers -= 1
+                                hideActionMenu()
+                            }
                         }
                     }
-                }
-            )
-            
-            // Preferences button
-            actionButton(
-                systemName: "gearshape.fill",
-                color: .red,
-                action: {
-                    showingPreferences = true
-                    hideActionMenu()
-                }
-            )
+                )
+                
+                // Settings button
+                actionMenuButton(
+                    title: "Settings",
+                    systemName: "gearshape",
+                    backgroundColor: Color(red: 0.85, green: 0.85, blue: 0.85),
+                    isEnabled: true,
+                    action: {
+                        showingPreferences = true
+                        hideActionMenu()
+                    }
+                )
+            }
         }
     }
     
     @ViewBuilder
-    private func actionButton(systemName: String, color: Color, action: @escaping () -> Void) -> some View {
+    private func actionMenuButton(title: String, systemName: String, backgroundColor: Color, isEnabled: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            ZStack {
-                Rectangle()
-                    .fill(color)
-                    .frame(width: actionButtonWidth, height: UIScreen.main.bounds.height)
-                
+            HStack {
                 Image(systemName: systemName)
-                    .font(.system(size: 30, weight: .bold))
-                    .foregroundColor(.white)
+                    .font(.system(size: 24, weight: .medium))
+                    .foregroundColor(isEnabled ? .primary : .secondary)
+                    .frame(width: 30)
+                
+                Text(title)
+                    .font(.custom("SFProDisplay-Medium", size: 28))
+                    .fontWidth(.expanded)
+                    .foregroundColor(isEnabled ? .primary : .secondary)
+                
+                Spacer()
             }
+            .padding(.horizontal, 20)
+            .frame(height: 90)
+            .background(backgroundColor)
         }
+        .disabled(!isEnabled)
         .buttonStyle(PlainButtonStyle())
     }
     
     private func hideActionMenu() {
-        withAnimation(.spring()) {
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
             showingActionMenu = false
-            actionMenuOffset = 0
         }
     }
     
