@@ -14,67 +14,107 @@ struct PreferencesView: View {
     var body: some View {
         NavigationView {
             Form {
-                Section(header: Text("Game Settings")) {
-                    // Default starting life
-                    VStack(alignment: .leading) {
-                        Text("Default Starting Life")
-                            .font(.headline)
-                        
-                        Picker("Default Starting Life", selection: $settings.defaultStartingLife) {
-                            ForEach([2, 3, 4, 5, 6], id: \.self) { value in
-                                Text("\(value)").tag(value)
+                Section {
+                    VStack(alignment: .leading, spacing: 40) {
+                        // Starting life section
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Starting Life")
+                                .font(.title3)
+                                .fontWeight(.semibold)
+                            
+                            Picker("Starting Life", selection: $settings.selectedStartingLifeOption) {
+                                ForEach(StartingLifeOption.allCases, id: \.self) { option in
+                                    Text(option.displayText).tag(option)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+                            
+                            if settings.selectedStartingLifeOption == .custom {
+                                HStack {
+                                    Text("Custom")
+                                        .font(.system(size: 17))
+                                    
+                                    Spacer()
+                                    
+                                    TextField("Enter a number", text: $settings.customStartingLifeValue)
+                                        .keyboardType(.numberPad)
+                                        .multilineTextAlignment(.trailing)
+                                        .font(.system(size: 17))
+                                        .foregroundColor(.secondary)
+                                }
                             }
                         }
-                        .pickerStyle(.segmented)
-                    }
-                    .padding(.vertical, 8)
-                    
-                    // Number of players
-                    VStack(alignment: .leading) {
-                        Text("Number of Players")
-                            .font(.headline)
                         
-                        Picker("Number of Players", selection: $settings.numberOfPlayers) {
-                            ForEach(1...4, id: \.self) { value in
-                                Text("\(value)").tag(value)
+                        // Number of players section
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Number of Players")
+                                .font(.title3)
+                                .fontWeight(.semibold)
+                            
+                            Picker("Number of Players", selection: $settings.numberOfPlayers) {
+                                ForEach(1...4, id: \.self) { value in
+                                    Text("\(value)").tag(value)
+                                }
                             }
+                            .pickerStyle(.segmented)
                         }
-                        .pickerStyle(.segmented)
                     }
                     .padding(.vertical, 8)
                 }
                 
-                Section(header: Text("Appearance")) {
-                    // Color palette
-                    VStack(alignment: .leading) {
-                        Text("Color Palette")
-                            .font(.headline)
-                        
-                        Picker("Color Palette", selection: $settings.selectedPalette) {
-                            ForEach(ColorPalette.allCases) { palette in
-                                Text(palette.rawValue).tag(palette)
+                Section {
+                    VStack(alignment: .leading, spacing: 28) {
+                        // Color palette section
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Color Palette")
+                                .font(.title3)
+                                .fontWeight(.semibold)
+                            
+                            Picker("Color Palette", selection: $settings.selectedPalette) {
+                                ForEach(ColorPalette.allCases) { palette in
+                                    Text(palette.rawValue).tag(palette)
+                                }
                             }
+                            .pickerStyle(.segmented)
                         }
-                        .pickerStyle(.segmented)
-                    }
-                    .padding(.vertical, 8)
-                    
-                    // Color palette preview
-                    VStack(spacing: 12) {
-                        Text("Preview")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity, alignment: .leading)
                         
-                        HStack(spacing: 8) {
-                            ForEach(1...min(settings.numberOfPlayers, 4), id: \.self) { playerNumber in
-                                ColorPreviewCell(playerNumber: playerNumber)
+                        // Preview section
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Preview")
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                            
+                            HStack(spacing: 8) {
+                                ForEach(1...min(settings.numberOfPlayers, 4), id: \.self) { playerNumber in
+                                    ColorPreviewCell(playerNumber: playerNumber)
+                                }
                             }
                         }
                     }
                     .padding(.vertical, 8)
                 }
+                
+                Section {
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Tips")
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                        
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Text("Swipe left to open the menu")
+                            }
+                            Divider()
+                            HStack {
+                                Text("Tap and hold on any life counter area to manually change the number")
+                            }
+                        }
+                        .font(.system(size: 15))
+                    }
+                    .padding(.vertical, 8)
+                }
             }
-            .navigationTitle("Preferences")
+            .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -83,6 +123,7 @@ struct PreferencesView: View {
                     }
                 }
             }
+            .listSectionSpacing(20)
         }
     }
 }

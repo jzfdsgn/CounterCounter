@@ -17,10 +17,38 @@ enum ColorPalette: String, CaseIterable, Identifiable {
 }
 
 // Class to manage app settings
+enum StartingLifeOption: Int, CaseIterable {
+    case three = 3
+    case four = 4
+    case five = 5
+    case custom = -1
+    
+    var displayText: String {
+        switch self {
+        case .three: return "3"
+        case .four: return "4"
+        case .five: return "5"
+        case .custom: return "Custom"
+        }
+    }
+}
+
 class AppSettings: ObservableObject {
     @Published var selectedPalette: ColorPalette = .grayscale
     @Published var numberOfPlayers: Int = 1
-    @Published var defaultStartingLife: Int = 5
+    @Published var selectedStartingLifeOption: StartingLifeOption = .five
+    @Published var customStartingLifeValue: String = ""
+    
+    // Computed property to get the effective starting life value
+    var effectiveStartingLife: Int {
+        if selectedStartingLifeOption == .custom, 
+           !customStartingLifeValue.isEmpty, 
+           let customValue = Int(customStartingLifeValue), 
+           customValue > 0 {
+            return customValue
+        }
+        return selectedStartingLifeOption.rawValue > 0 ? selectedStartingLifeOption.rawValue : 5
+    }
     
     // Singleton instance
     static let shared = AppSettings()
@@ -31,7 +59,7 @@ class AppSettings: ObservableObject {
 struct CounterView: View {
     @State private var lifeTotal: Int
     @State private var showingLifePicker = false
-    @StateObject private var settings = AppSettings.shared
+    @ObservedObject private var settings = AppSettings.shared
     
     // Player number (1-4)
     var playerNumber: Int = 1
@@ -61,7 +89,7 @@ struct CounterView: View {
         self.fontSize = fontSize
         self.vStackSpacing = vStackSpacing
         // Use _lifeTotal to initialize the @State property
-        _lifeTotal = State(initialValue: AppSettings.shared.defaultStartingLife)
+        _lifeTotal = State(initialValue: AppSettings.shared.effectiveStartingLife)
     }
     
     var body: some View {

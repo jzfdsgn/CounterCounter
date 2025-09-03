@@ -12,6 +12,7 @@ struct ContentView: View {
     @State private var showingPreferences = false
     @State private var showingActionMenu = false
     @State private var menuOffset: CGFloat = 0
+    @State private var settingsResetTrigger = UUID()
     
     var body: some View {
         GeometryReader { geometry in
@@ -57,6 +58,12 @@ struct ContentView: View {
         .ignoresSafeArea()
         .sheet(isPresented: $showingPreferences) {
             PreferencesView()
+        }
+        .onReceive(settings.$selectedStartingLifeOption) { _ in
+            settingsResetTrigger = UUID()
+        }
+        .onReceive(settings.$customStartingLifeValue) { _ in
+            settingsResetTrigger = UUID()
         }
     }
     
@@ -149,6 +156,7 @@ struct ContentView: View {
         switch settings.numberOfPlayers {
         case 1:
             CounterView(playerNumber: 1)
+                .id(settingsResetTrigger)
         case 2:
             GeometryReader { geometry in
                 let isLandscape = geometry.size.width > geometry.size.height
@@ -157,16 +165,20 @@ struct ContentView: View {
                     // Landscape: side-by-side, both upright
                     HStack(spacing: 0) {
                         CounterView(playerNumber: 1)
+                            .id(settingsResetTrigger)
                             .frame(width: geometry.size.width / 2)
                         CounterView(playerNumber: 2)
+                            .id(settingsResetTrigger)
                             .frame(width: geometry.size.width / 2)
                     }
                 } else {
                     // Portrait: top-bottom with one rotated 180°
                     VStack(spacing: 0) {
                         CounterView(playerNumber: 2, rotationAngle: 180)
+                            .id(settingsResetTrigger)
                             .frame(height: geometry.size.height / 2)
                         CounterView(playerNumber: 1)
+                            .id(settingsResetTrigger)
                             .frame(height: geometry.size.height / 2)
                     }
                 }
@@ -179,10 +191,13 @@ struct ContentView: View {
                     // Landscape: all three side-by-side, all upright
                     HStack(spacing: 0) {
                         CounterView(playerNumber: 1, fontSize: 156)
+                            .id(settingsResetTrigger)
                             .frame(width: geometry.size.width / 3)
                         CounterView(playerNumber: 2, fontSize: 156)
+                            .id(settingsResetTrigger)
                             .frame(width: geometry.size.width / 3)
                         CounterView(playerNumber: 3, fontSize: 156)
+                            .id(settingsResetTrigger)
                             .frame(width: geometry.size.width / 3)
                     }
                 } else {
@@ -190,12 +205,15 @@ struct ContentView: View {
                     VStack(spacing: 0) {
                         HStack(spacing: 0) {
                             CounterView(playerNumber: 2, rotationAngle: 180, fontSize: 156)
+                                .id(settingsResetTrigger)
                                 .frame(width: geometry.size.width / 2)
                             CounterView(playerNumber: 3, rotationAngle: 180, fontSize: 156)
+                                .id(settingsResetTrigger)
                                 .frame(width: geometry.size.width / 2)
                         }
                         .frame(height: geometry.size.height / 2)
                         CounterView(playerNumber: 1, fontSize: 156)
+                            .id(settingsResetTrigger)
                             .frame(height: geometry.size.height / 2)
                     }
                 }
@@ -209,15 +227,19 @@ struct ContentView: View {
                     VStack(spacing: 0) {
                         HStack(spacing: 0) {
                             CounterView(playerNumber: 3, rotationAngle: 180, fontSize: 120, vStackSpacing: 0)
+                                .id(settingsResetTrigger)
                                 .frame(width: geometry.size.width / 2)
                             CounterView(playerNumber: 4, rotationAngle: 180, fontSize: 120, vStackSpacing: 0)
+                                .id(settingsResetTrigger)
                                 .frame(width: geometry.size.width / 2)
                         }
                         .frame(height: geometry.size.height / 2)
                         HStack(spacing: 0) {
                             CounterView(playerNumber: 1, fontSize: 120, vStackSpacing: 0)
+                                .id(settingsResetTrigger)
                                 .frame(width: geometry.size.width / 2)
                             CounterView(playerNumber: 2, fontSize: 120, vStackSpacing: 0)
+                                .id(settingsResetTrigger)
                                 .frame(width: geometry.size.width / 2)
                         }
                         .frame(height: geometry.size.height / 2)
@@ -227,15 +249,19 @@ struct ContentView: View {
                     VStack(spacing: 0) {
                         HStack(spacing: 0) {
                             CounterView(playerNumber: 3, rotationAngle: 180, fontSize: 156)
+                                .id(settingsResetTrigger)
                                 .frame(width: geometry.size.width / 2)
                             CounterView(playerNumber: 4, rotationAngle: 180, fontSize: 156)
+                                .id(settingsResetTrigger)
                                 .frame(width: geometry.size.width / 2)
                         }
                         .frame(height: geometry.size.height / 2)
                         HStack(spacing: 0) {
                             CounterView(playerNumber: 1, fontSize: 156)
+                                .id(settingsResetTrigger)
                                 .frame(width: geometry.size.width / 2)
                             CounterView(playerNumber: 2, fontSize: 156)
+                                .id(settingsResetTrigger)
                                 .frame(width: geometry.size.width / 2)
                         }
                         .frame(height: geometry.size.height / 2)
@@ -244,6 +270,7 @@ struct ContentView: View {
             }
         default:
             CounterView(playerNumber: 1)
+                .id(settingsResetTrigger)
         }
     }
 }
