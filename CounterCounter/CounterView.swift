@@ -37,17 +37,24 @@ class AppSettings: ObservableObject {
     @Published var selectedPalette: ColorPalette = .grayscale
     @Published var numberOfPlayers: Int = 1
     @Published var selectedStartingLifeOption: StartingLifeOption = .five
-    @Published var customStartingLifeValue: String = ""
+    @Published var customStartingLifeValue: String = ""  // What user is currently typing
+    @Published var appliedCustomStartingLife: Int? = nil // What gets actually used
     
     // Computed property to get the effective starting life value
     var effectiveStartingLife: Int {
         if selectedStartingLifeOption == .custom, 
-           !customStartingLifeValue.isEmpty, 
-           let customValue = Int(customStartingLifeValue), 
-           customValue > 0 {
-            return customValue
+           let appliedCustomValue = appliedCustomStartingLife,
+           appliedCustomValue >= 0 {
+            return appliedCustomValue
         }
         return selectedStartingLifeOption.rawValue > 0 ? selectedStartingLifeOption.rawValue : 5
+    }
+    
+    // Method to apply custom value
+    func applyCustomStartingLife() {
+        if let customValue = Int(customStartingLifeValue), customValue > 0 {
+            appliedCustomStartingLife = customValue
+        }
     }
     
     // Singleton instance

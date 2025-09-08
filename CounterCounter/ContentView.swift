@@ -62,7 +62,7 @@ struct ContentView: View {
         .onReceive(settings.$selectedStartingLifeOption) { _ in
             settingsResetTrigger = UUID()
         }
-        .onReceive(settings.$customStartingLifeValue) { _ in
+        .onReceive(settings.$appliedCustomStartingLife) { _ in
             settingsResetTrigger = UUID()
         }
     }

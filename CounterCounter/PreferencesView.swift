@@ -11,6 +11,20 @@ struct PreferencesView: View {
     @ObservedObject private var settings = AppSettings.shared
     @Environment(\.dismiss) var dismiss
     
+    // Pending settings state - changes aren't applied until user taps Apply
+    @State private var pendingSelectedPalette: ColorPalette
+    @State private var pendingNumberOfPlayers: Int
+    @State private var pendingSelectedStartingLifeOption: StartingLifeOption
+    @State private var pendingCustomStartingLifeValue: String
+    
+    init() {
+        let currentSettings = AppSettings.shared
+        _pendingSelectedPalette = State(initialValue: currentSettings.selectedPalette)
+        _pendingNumberOfPlayers = State(initialValue: currentSettings.numberOfPlayers)
+        _pendingSelectedStartingLifeOption = State(initialValue: currentSettings.selectedStartingLifeOption)
+        _pendingCustomStartingLifeValue = State(initialValue: currentSettings.customStartingLifeValue)
+    }
+    
     var body: some View {
         NavigationView {
             Form {
@@ -22,26 +36,26 @@ struct PreferencesView: View {
                                 .font(.title3)
                                 .fontWeight(.semibold)
                             
-                            Picker("Starting Life", selection: $settings.selectedStartingLifeOption) {
+                            Picker("Starting Life", selection: $pendingSelectedStartingLifeOption) {
                                 ForEach(StartingLifeOption.allCases, id: \.self) { option in
                                     Text(option.displayText).tag(option)
                                 }
                             }
                             .pickerStyle(.segmented)
                             
-                            if settings.selectedStartingLifeOption == .custom {
-                                HStack {
-                                    Text("Custom")
-                                        .font(.system(size: 17))
-                                    
-                                    Spacer()
-                                    
-                                    TextField("Enter a number", text: $settings.customStartingLifeValue)
-                                        .keyboardType(.numberPad)
-                                        .multilineTextAlignment(.trailing)
-                                        .font(.system(size: 17))
-                                        .foregroundColor(.secondary)
-                                }
+                            if pendingSelectedStartingLifeOption == .custom {
+                                TextField("Enter a number", text: $pendingCustomStartingLifeValue)
+                                    .keyboardType(.numberPad)
+                                    .font(.system(size: 17))
+                                    .textFieldStyle(.plain)
+                                    .padding(.bottom, 4)
+                                    .overlay(
+                                        Rectangle()
+                                            .frame(height: 1)
+                                            .foregroundColor(.secondary.opacity(0.25)),
+                                        alignment: .bottom
+                                    )
+                                    .padding(.top, 12)
                             }
                         }
                         
@@ -51,7 +65,7 @@ struct PreferencesView: View {
                                 .font(.title3)
                                 .fontWeight(.semibold)
                             
-                            Picker("Number of Players", selection: $settings.numberOfPlayers) {
+                            Picker("Number of Players", selection: $pendingNumberOfPlayers) {
                                 ForEach(1...4, id: \.self) { value in
                                     Text("\(value)").tag(value)
                                 }
@@ -70,7 +84,7 @@ struct PreferencesView: View {
                                 .font(.title3)
                                 .fontWeight(.semibold)
                             
-                            Picker("Color Palette", selection: $settings.selectedPalette) {
+                            Picker("Color Palette", selection: $pendingSelectedPalette) {
                                 ForEach(ColorPalette.allCases) { palette in
                                     Text(palette.rawValue).tag(palette)
                                 }
@@ -85,8 +99,8 @@ struct PreferencesView: View {
                                 .fontWeight(.semibold)
                             
                             HStack(spacing: 8) {
-                                ForEach(1...min(settings.numberOfPlayers, 4), id: \.self) { playerNumber in
-                                    ColorPreviewCell(playerNumber: playerNumber)
+                                ForEach(1...min(pendingNumberOfPlayers, 4), id: \.self) { playerNumber in
+                                    ColorPreviewCell(playerNumber: playerNumber, palette: pendingSelectedPalette)
                                 }
                             }
                         }
@@ -117,8 +131,15 @@ struct PreferencesView: View {
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+                
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
+                    Button("Apply") {
+                        applyAllSettings()
                         dismiss()
                     }
                 }
@@ -126,21 +147,35 @@ struct PreferencesView: View {
             .listSectionSpacing(20)
         }
     }
+    
+    private func applyAllSettings() {
+        settings.selectedPalette = pendingSelectedPalette
+        settings.numberOfPlayers = pendingNumberOfPlayers
+        settings.selectedStartingLifeOption = pendingSelectedStartingLifeOption
+        settings.customStartingLifeValue = pendingCustomStartingLifeValue
+        
+        // Apply custom starting life if valid
+        if pendingSelectedStartingLifeOption == .custom,
+           let customValue = Int(pendingCustomStartingLifeValue),
+           customValue >= 0 {
+            settings.appliedCustomStartingLife = customValue
+        }
+    }
 }
 
 struct ColorPreviewCell: View {
-    @ObservedObject private var settings = AppSettings.shared
     let playerNumber: Int
+    let palette: ColorPalette
     
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 8)
-                .fill(Color.background(for: playerNumber, in: settings.selectedPalette))
+                .fill(Color.background(for: playerNumber, in: palette))
                 .frame(height: 60)
             
             Text("\(playerNumber)")
                 .font(.system(size: 20, weight: .bold))
-                .foregroundColor(Color.foreground(for: playerNumber, in: settings.selectedPalette))
+                .foregroundColor(Color.foreground(for: playerNumber, in: palette))
         }
     }
 }
