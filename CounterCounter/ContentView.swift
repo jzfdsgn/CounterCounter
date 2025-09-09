@@ -14,15 +14,32 @@ struct ContentView: View {
     @State private var menuOffset: CGFloat = 0
     @State private var settingsResetTrigger = UUID()
     
+    // Menu hint state
+    @State private var hasUsedMenuThisSession = false
+    @State private var isShowingMenuHint = false
+    
+    // Animation constants
+    private let menuAnimation = Animation.spring(response: 0.4, dampingFraction: 0.8)
+    private let hintAnimation = Animation.spring(response: 0.3, dampingFraction: 0.8)
+    
+    // UserDefaults key for permanent hint disable
+    private var shouldShowMenuHint: Bool {
+        !UserDefaults.standard.bool(forKey: "hasShownMenuHint") && !hasUsedMenuThisSession
+    }
+    
     var body: some View {
         GeometryReader { geometry in
             let menuWidth = geometry.size.width * 0.75 // Menu takes up 75% of screen width
+            let hintOffset = menuWidth * 0.65 // Show ~35% of menu during hint
+            let currentMenuOffset = isShowingMenuHint ? hintOffset : (showingActionMenu ? 0 : menuWidth)
+            let currentContentOffset = isShowingMenuHint ? -(menuWidth * 0.35) + 80 : (showingActionMenu ? -menuWidth + 80 : 0)
             
             ZStack(alignment: .leading) {
                 // Main content (gets pushed to the left when menu is shown)
                 playerCountersView()
-                    .offset(x: showingActionMenu ? -menuWidth + 80 : 0)
-                    .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showingActionMenu)
+                    .offset(x: currentContentOffset)
+                    .animation(menuAnimation, value: showingActionMenu)
+                    .animation(hintAnimation, value: isShowingMenuHint)
                 
                 // Action menu (slides in from right)
                 HStack(spacing: 0) {
@@ -31,17 +48,22 @@ struct ContentView: View {
                         .frame(width: menuWidth)
                         .background(Color(red: 0.95, green: 0.95, blue: 0.95))
                 }
-                .offset(x: showingActionMenu ? 0 : menuWidth)
-                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showingActionMenu)
+                .offset(x: currentMenuOffset)
+                .animation(menuAnimation, value: showingActionMenu)
+                .animation(hintAnimation, value: isShowingMenuHint)
             }
             .gesture(
                 DragGesture()
                     .onEnded { value in
+                        // Block gestures during hint animation
+                        guard !isShowingMenuHint else { return }
+                        
                         let horizontalThreshold: CGFloat = 100
                         
                         if abs(value.translation.width) > abs(value.translation.height) {
                             if value.translation.width < -horizontalThreshold {
                                 // Swiped left - show action menu
+                                markMenuAsUsed()
                                 withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                                     showingActionMenu = true
                                 }
@@ -64,6 +86,13 @@ struct ContentView: View {
         }
         .onReceive(settings.$appliedCustomStartingLife) { _ in
             settingsResetTrigger = UUID()
+        }
+        .onAppear {
+            if shouldShowMenuHint {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                    showMenuHint()
+                }
+            }
         }
     }
     
@@ -149,6 +178,23 @@ struct ContentView: View {
         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
             showingActionMenu = false
         }
+    }
+    
+    private func showMenuHint() {
+        guard shouldShowMenuHint else { return }
+        
+        // Step 1: Show hint (view-level animation handles the transition)
+        isShowingMenuHint = true
+        
+        // Step 2: Hide after hold duration
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.65) {
+            isShowingMenuHint = false
+        }
+    }
+    
+    private func markMenuAsUsed() {
+        hasUsedMenuThisSession = true
+        UserDefaults.standard.set(true, forKey: "hasShownMenuHint")
     }
     
     @ViewBuilder
